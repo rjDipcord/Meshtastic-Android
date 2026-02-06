@@ -16,6 +16,8 @@
  */
 package org.meshtastic.feature.node.component
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,24 +34,33 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.SocialDistance
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import org.meshtastic.core.database.model.Node
 import org.meshtastic.core.model.util.toDistanceString
 import org.meshtastic.core.strings.Res
+import org.meshtastic.core.strings.cancel
 import org.meshtastic.core.strings.exchange_position
+import org.meshtastic.core.strings.exchange_position_on_channel
 import org.meshtastic.core.strings.open_compass
 import org.meshtastic.core.strings.position
 import org.meshtastic.feature.node.model.LogsType
@@ -72,6 +83,7 @@ fun PositionSection(
     availableLogs: Set<LogsType>,
     onAction: (NodeDetailAction) -> Unit,
     modifier: Modifier = Modifier,
+    channelNames: List<String> = emptyList(),
 ) {
     val distance = ourNode?.distance(node)?.takeIf { it > 0 }?.toDistanceString(metricsState.displayUnits)
     val hasValidPosition = node.latitude != 0.0 || node.longitude != 0.0
@@ -86,7 +98,7 @@ fun PositionSection(
             }
 
             if (!isLocal) {
-                PositionActionButtons(node, hasValidPosition, metricsState.displayUnits, onAction)
+                PositionActionButtons(node, hasValidPosition, metricsState.displayUnits, onAction, channelNames)
             }
 
             if (availableLogs.contains(LogsType.NODE_MAP) || availableLogs.contains(LogsType.POSITIONS)) {
@@ -144,36 +156,72 @@ private fun PositionMap(node: Node, distance: String?) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PositionActionButtons(
     node: Node,
     hasValidPosition: Boolean,
     displayUnits: Config.DisplayConfig.DisplayUnits,
     onAction: (NodeDetailAction) -> Unit,
+    channelNames: List<String>,
 ) {
+    var showChannelDialog by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
+
+    if (showChannelDialog && channelNames.isNotEmpty()) {
+        ChannelPickerDialog(
+            channelNames = channelNames,
+            onChannelSelected = { channelIndex ->
+                showChannelDialog = false
+                onAction(
+                    NodeDetailAction.HandleNodeMenuAction(
+                        NodeMenuAction.RequestPosition(node, channelIndex = channelIndex),
+                    ),
+                )
+            },
+            onDismiss = { showChannelDialog = false },
+        )
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Button(
-            onClick = { onAction(NodeDetailAction.HandleNodeMenuAction(NodeMenuAction.RequestPosition(node))) },
-            modifier = Modifier.weight(EXCHANGE_BUTTON_WEIGHT),
+        Surface(
+            modifier = Modifier
+                .weight(EXCHANGE_BUTTON_WEIGHT)
+                .combinedClickable(
+                    onClick = {
+                        onAction(NodeDetailAction.HandleNodeMenuAction(NodeMenuAction.RequestPosition(node)))
+                    },
+                    onLongClick = {
+                        if (channelNames.size > 1) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showChannelDialog = true
+                        }
+                    },
+                ),
             shape = MaterialTheme.shapes.large,
-            colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            ),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ) {
-            Icon(Icons.Rounded.LocationOn, null, Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = stringResource(Res.string.exchange_position),
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Visible,
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(ButtonDefaults.ContentPadding),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Rounded.LocationOn, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = stringResource(Res.string.exchange_position),
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Visible,
+                )
+            }
         }
 
         if (hasValidPosition) {
@@ -193,4 +241,38 @@ private fun PositionActionButtons(
             }
         }
     }
+}
+
+@Composable
+private fun ChannelPickerDialog(
+    channelNames: List<String>,
+    onChannelSelected: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(Res.string.exchange_position_on_channel)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                channelNames.forEachIndexed { index, name ->
+                    TextButton(
+                        onClick = { onChannelSelected(index) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "$index: $name",
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(Res.string.cancel))
+            }
+        },
+    )
 }

@@ -305,7 +305,16 @@ private fun NodeDetailList(
                 isLocal = uiState.metricsState.isLocal,
             )
         }
-        item { PositionSection(node, ourNode, uiState.metricsState, uiState.availableLogs, onAction) }
+        item {
+            PositionSection(
+                node,
+                ourNode,
+                uiState.metricsState,
+                uiState.availableLogs,
+                onAction,
+                channelNames = uiState.channelNames,
+            )
+        }
         if (uiState.metricsState.deviceHardware != null) {
             item { DeviceDetailsSection(uiState.metricsState) }
         }

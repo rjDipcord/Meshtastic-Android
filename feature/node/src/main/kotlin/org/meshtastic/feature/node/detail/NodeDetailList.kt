@@ -77,6 +77,7 @@ fun NodeDetailContent(
     onAction: (NodeDetailAction) -> Unit,
     onSaveNotes: (nodeNum: Int, notes: String) -> Unit,
     modifier: Modifier = Modifier,
+    channelNames: List<String> = emptyList(),
 ) {
     var showShareDialog by remember { mutableStateOf(false) }
     if (showShareDialog) {
@@ -99,6 +100,7 @@ fun NodeDetailContent(
         modifier = modifier,
         availableLogs = availableLogs,
         onSaveNotes = onSaveNotes,
+        channelNames = channelNames,
     )
 }
 
@@ -115,6 +117,7 @@ fun NodeDetailList(
     availableLogs: Set<LogsType>,
     onSaveNotes: (Int, String) -> Unit,
     modifier: Modifier = Modifier,
+    channelNames: List<String> = emptyList(),
 ) {
     var showFirmwareSheet by remember { mutableStateOf(false) }
     var selectedFirmware by remember { mutableStateOf<FirmwareRelease?>(null) }
@@ -183,6 +186,7 @@ fun NodeDetailList(
                     else -> onAction(action)
                 }
             },
+            channelNames = channelNames,
         )
 
         if (metricsState.deviceHardware != null) {

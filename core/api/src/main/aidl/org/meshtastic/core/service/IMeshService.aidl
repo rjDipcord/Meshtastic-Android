@@ -120,6 +120,9 @@ interface IMeshService {
     /// Send position packet with wantResponse to nodeNum
     void requestPosition(in int destNum, in Position position);
 
+    /// Send position packet with wantResponse to nodeNum on a specific channel
+    void requestPositionOnChannel(in int destNum, in Position position, in int channelIndex);
+
     /// Send setFixedPosition admin packet (or removeFixedPosition if Position is empty)
     void setFixedPosition(in int destNum, in Position position);
 
