@@ -101,11 +101,16 @@ class NodeRequestActions @Inject constructor(private val serviceRepository: Serv
         destNum: Int,
         longName: String,
         position: Position = Position(0.0, 0.0, 0),
+        channelIndex: Int = -1,
     ) {
         scope.launch(Dispatchers.IO) {
-            Logger.i { "Requesting position for '$destNum'" }
+            Logger.i { "Requesting position for '$destNum' on channel $channelIndex" }
             try {
-                serviceRepository.meshService?.requestPosition(destNum, position)
+                if (channelIndex >= 0) {
+                    serviceRepository.meshService?.requestPositionOnChannel(destNum, position, channelIndex)
+                } else {
+                    serviceRepository.meshService?.requestPosition(destNum, position)
+                }
                 _effects.emit(
                     NodeRequestEffect.ShowFeedback(Res.string.requesting_from, listOf(Res.string.position, longName)),
                 )

@@ -46,6 +46,7 @@ import org.meshtastic.core.database.entity.MyNodeEntity
 import org.meshtastic.core.database.model.Node
 import org.meshtastic.core.model.DataPacket
 import org.meshtastic.core.model.MyNodeInfo
+import org.meshtastic.core.model.util.getChannel
 import org.meshtastic.core.navigation.NodesRoutes
 import org.meshtastic.core.service.ServiceAction
 import org.meshtastic.core.service.ServiceRepository
@@ -73,6 +74,7 @@ data class NodeDetailUiState(
     val availableLogs: Set<LogsType> = emptySet(),
     val lastTracerouteTime: Long? = null,
     val lastRequestNeighborsTime: Long? = null,
+    val channelNames: List<String> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -103,7 +105,7 @@ constructor(
 
     private val ourNodeNumFlow = nodeRepository.nodeDBbyNum.map { it.keys.firstOrNull() }.distinctUntilChanged()
 
-    val uiState: StateFlow<NodeDetailUiState> =
+    private val nodeDetailFlow =
         activeNodeId
             .flatMapLatest { nodeId ->
                 if (nodeId == null) return@flatMapLatest flowOf(NodeDetailUiState())
@@ -269,7 +271,17 @@ constructor(
                         }
                     }
             }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NodeDetailUiState())
+
+    val uiState: StateFlow<NodeDetailUiState> =
+        combine(
+            nodeDetailFlow,
+            radioConfigRepository.channelSetFlow,
+        ) { state, channelSet ->
+            val names = channelSet.settings.indices.mapNotNull { index ->
+                channelSet.getChannel(index)?.name
+            }
+            state.copy(channelNames = names)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NodeDetailUiState())
 
     val effects: SharedFlow<NodeRequestEffect> = nodeRequestActions.effects
 
@@ -294,7 +306,12 @@ constructor(
                     action.node.user.long_name ?: "",
                 )
             is NodeMenuAction.RequestPosition ->
-                nodeRequestActions.requestPosition(viewModelScope, action.node.num, action.node.user.long_name ?: "")
+                nodeRequestActions.requestPosition(
+                    viewModelScope,
+                    action.node.num,
+                    action.node.user.long_name ?: "",
+                    channelIndex = action.channelIndex,
+                )
             is NodeMenuAction.RequestTelemetry ->
                 nodeRequestActions.requestTelemetry(
                     viewModelScope,

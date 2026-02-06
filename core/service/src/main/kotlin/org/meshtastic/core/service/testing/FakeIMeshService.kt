@@ -81,6 +81,8 @@ open class FakeIMeshService : IMeshService.Stub() {
 
     override fun requestPosition(destNum: Int, position: Position?) {}
 
+    override fun requestPositionOnChannel(destNum: Int, position: Position?, channelIndex: Int) {}
+
     override fun setFixedPosition(destNum: Int, position: Position?) {}
 
     override fun requestTraceroute(requestId: Int, destNum: Int) {}

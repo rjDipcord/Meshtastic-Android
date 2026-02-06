@@ -312,6 +312,11 @@ class MeshService : Service() {
                 router.actionHandler.handleRequestPosition(destNum, position, myNodeNum)
             }
 
+            override fun requestPositionOnChannel(destNum: Int, position: Position, channelIndex: Int) =
+                toRemoteExceptions {
+                    router.actionHandler.handleRequestPosition(destNum, position, myNodeNum, channelIndex)
+                }
+
             override fun setFixedPosition(destNum: Int, position: Position) = toRemoteExceptions {
                 commandSender.setFixedPosition(destNum, position)
             }

@@ -41,7 +41,12 @@ constructor(
             is NodeMenuAction.RequestNeighborInfo ->
                 nodeRequestActions.requestNeighborInfo(scope, action.node.num, action.node.user.long_name ?: "")
             is NodeMenuAction.RequestPosition ->
-                nodeRequestActions.requestPosition(scope, action.node.num, action.node.user.long_name ?: "")
+                nodeRequestActions.requestPosition(
+                    scope,
+                    action.node.num,
+                    action.node.user.long_name ?: "",
+                    channelIndex = action.channelIndex,
+                )
             is NodeMenuAction.RequestTelemetry ->
                 nodeRequestActions.requestTelemetry(
                     scope,

@@ -185,7 +185,7 @@ constructor(
         analytics.track("data_send", DataPair("num_bytes", bytes.size), DataPair("type", p.dataType))
     }
 
-    fun handleRequestPosition(destNum: Int, position: Position, myNodeNum: Int) {
+    fun handleRequestPosition(destNum: Int, position: Position, myNodeNum: Int, channelIndex: Int = -1) {
         if (destNum != myNodeNum) {
             val provideLocation = meshPrefs.shouldProvideNodeLocation(myNodeNum)
             val currentPosition =
@@ -194,7 +194,7 @@ constructor(
                     else ->
                         nodeManager.nodeDBbyNodeNum[myNodeNum]?.position?.let { Position(it) }?.takeIf { it.isValid() }
                 }
-            currentPosition?.let { commandSender.requestPosition(destNum, it) }
+            currentPosition?.let { commandSender.requestPosition(destNum, it, channelIndex) }
         }
     }
 

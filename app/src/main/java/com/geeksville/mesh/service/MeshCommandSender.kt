@@ -226,7 +226,7 @@ constructor(
         )
     }
 
-    fun requestPosition(destNum: Int, currentPosition: Position) {
+    fun requestPosition(destNum: Int, currentPosition: Position, channelIndex: Int = -1) {
         val meshPosition =
             org.meshtastic.proto.Position(
                 latitude_i = Position.degI(currentPosition.latitude),
@@ -234,10 +234,15 @@ constructor(
                 altitude = currentPosition.altitude,
                 time = (System.currentTimeMillis() / TIME_MS_TO_S).toInt(),
             )
+        val channel = if (channelIndex >= 0) {
+            channelIndex
+        } else {
+            nodeManager?.nodeDBbyNodeNum?.get(destNum)?.channel ?: 0
+        }
         packetHandler?.sendToRadio(
             buildMeshPacket(
                 to = destNum,
-                channel = nodeManager?.nodeDBbyNodeNum?.get(destNum)?.channel ?: 0,
+                channel = channel,
                 priority = MeshPacket.Priority.BACKGROUND,
                 decoded =
                 Data(
